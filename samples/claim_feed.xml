@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<claims valuation='2026-04-30'>
+  <claim id='CL-10421' policy='PL-77310'><insured>Alder Logistics LLC</insured><status>Closed</status><paid currency='USD'>12500.75</paid></claim>
+  <claim id='CL-10422' policy='PL-77310'><insured>Alder Logistics LLC</insured><status>Open</status><paid currency='USD'>4200.00</paid></claim>
+  <claim id='CL-10435' policy='PL-81207'><insured>Brightwater Dental</insured><status>Open</status><paid currency='USD'>36750.40</paid></claim>
+</claims>

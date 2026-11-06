@@ -1,0 +1,9 @@
+Claim ID,Policy,Insured,Date of Loss,Cause,Status,Paid,Reserve,Adjuster
+CL-10421,PL-77310,"Alder Logistics, LLC",2026-01-14,Water damage,Closed,"12,500.75",0.00,M. Okafor
+CL-10422,PL-77310,"Alder Logistics, LLC",2026-02-03,Theft,Open,4200.00,8500.00,M. Okafor
+CL-10435,PL-81207,"Brightwater Dental",2026-02-19,Fire,Open,"36,750.40",61000.00,L. Petrov
+CL-10440,PL-90015,"Cobalt Freight",2026-03-02,Collision,Closed,9875.10,0.00,R. Singh
+CL-10447,PL-90015,"Cobalt Freight",2026-03-11,Cargo loss,Reopened,"15,300.00",7200.50,R. Singh
+CL-10452,PL-66402,"Dunmore Bakery",2026-03-25,Equipment breakdown,Open,0.00,11250.00,
+CL-10458,PL-81207,"Brightwater Dental",2026-04-08,Liability,Denied,0.00,0.00,L. Petrov
+CL-10463,PL-55128,"Elm Street Clinic",2026-04-22,Hail,Open,2310.25,5000.00,N/A
