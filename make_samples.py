@@ -553,6 +553,17 @@ def _misc(out: Path, made: Dict[str, Path]) -> None:
     made[z.name] = z
 
 
+def _edge_case_workbook(out: Path, made: Dict[str, Path]) -> None:
+    """The 14-tab Excel edge-case workbook is a committed file, not generated here (rebuilding it needs
+    LibreOffice: see make_excel_edge_cases.py). Copy it along so it is available like every other sample."""
+    src = HERE / "samples" / "excel_edge_cases.xlsx"
+    if src.is_file():
+        dst = out / src.name
+        if dst.resolve() != src.resolve():
+            shutil.copyfile(src, dst)
+        made[src.name] = dst
+
+
 def build_all(out_dir: str | Path | None = None) -> Dict[str, Path]:
     """Create every sample file; returns ``{filename: path}``."""
     out = Path(out_dir) if out_dir else HERE / "samples"
@@ -565,6 +576,7 @@ def build_all(out_dir: str | Path | None = None) -> Dict[str, Path]:
     _pdf(out, made)
     _encrypted_office(out, made)
     _misc(out, made)
+    _edge_case_workbook(out, made)
     return made
 
 

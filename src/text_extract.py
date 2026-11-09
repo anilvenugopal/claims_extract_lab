@@ -6,14 +6,18 @@ import pandas as pd
 import re
 from typing import TypedDict
 import zipfile
+import logging
 import chardet
 from striprtf.striprtf import rtf_to_text
 import fitz
 from formatted_text_extraction import _analyze_document, _render_page, ExtractionConfig
 from markdown_utils import removeMarkdownEmbeddedBase64
+from excel_to_markdown import parse_workbook
 
 
 HTML_COMMENT_PATTERN = re.compile(r"<!--[\s\S]*?-->")
+
+logger = logging.getLogger(__name__)
 
 
 def maskMarkdownHtmlCommentsPreservingOffsets(text: str) -> str:
@@ -214,6 +218,67 @@ class ExcelExtractor(TextExtractor):
             tables.append(ExcelSheetResponse({"sheet_name": sheet_name, "text": md_table}))
 
         return tables
+
+
+class OpenpyxlExcelExtractor(TextExtractor):
+    """Excel -> coordinate-aware markdown (see excel_to_markdown.py), as an alternative to ExcelExtractor.
+
+    Compared with the pandas ExcelExtractor it keeps the real header rows, finds several tables on one
+    sheet, shows merged cells, hidden sheets/rows/columns, and (optionally) comments, formulas and
+    General-format dates, and gives every table Excel's row numbers and column letters for citations.
+
+    Same interface and output shape as ExcelExtractor, so it can be swapped in:
+      * extractBySheet() -> [{"sheet_name": ..., "text": ...}, ...]   (one entry per sheet)
+      * extract()        -> [text, ...]                               (one string per sheet; no one-sheet limit)
+
+    Only .xlsx / .xlsm can be read this way. Legacy .xls and .xlsb files are handed to the pandas
+    ExcelExtractor automatically (set fallback_to_pandas=False to raise instead).
+
+    Extra keyword arguments are the options of excel_to_markdown.Options, for example
+    include_comments=True, detect_general_dates=True, include_formulas=True, include_hidden_sheets=False.
+    Like the pandas version, only the first MAX_ROWS rows and MAX_COLUMNS columns of a sheet are read.
+    """
+
+    def __init__(self, include_legend: bool = True, fallback_to_pandas: bool = True, **options):
+        self.include_legend = include_legend
+        self.fallback_to_pandas = fallback_to_pandas
+        self.options = {"row_limit": MAX_ROWS, "column_limit": MAX_COLUMNS, **options}
+
+    def _parse(self, file_extension: str, response):
+        """Returns the ParseResult, or None if this file type has to go to the pandas extractor."""
+        engine = resolve_excel_engine(file_extension, response.content)
+        if engine != "openpyxl":
+            if not self.fallback_to_pandas:
+                raise ValueError(f"The openpyxl method cannot read this file type (engine would be '{engine}')")
+            logger.info("openpyxl method cannot read %s files; using the pandas extractor", engine)
+            return None
+        result = parse_workbook(response.content, legend=False, **self.options)
+        for warning in result.warnings:
+            logger.warning(warning)
+        return result
+
+    def _to_sheets(self, result) -> list[ExcelSheetResponse]:
+        sheets = []
+        for sheet in result.sheets:
+            if sheet.get("skipped"):
+                continue
+            text = sheet["markdown"]
+            if self.include_legend:
+                text = result.legend + "\n\n" + text
+            sheets.append(ExcelSheetResponse({"sheet_name": sheet["name"], "text": text[:CHAR_LIMIT]}))
+        return sheets
+
+    def extractBySheet(self, file_extension: str, response) -> list[ExcelSheetResponse]:
+        result = self._parse(file_extension, response)
+        if result is None:
+            return ExcelExtractor().extractBySheet(file_extension, response)
+        return self._to_sheets(result)
+
+    def extract(self, file_extension: str, response) -> list[str]:
+        result = self._parse(file_extension, response)
+        if result is None:
+            return ExcelExtractor().extract(file_extension, response)
+        return [sheet["text"] for sheet in self._to_sheets(result)]
 
 
 class CsvExtractor(TextExtractor):

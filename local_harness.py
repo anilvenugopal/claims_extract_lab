@@ -48,7 +48,7 @@ FUNCTIONS: Dict[str, Callable] = {
 PAYLOAD_TYPES: Dict[str, Optional[type]] = {
     "extractText": app.Payload,
     "extractFormattedPDFText": app.FormattedPDFPayload,
-    "excelExtractText": app.Payload,
+    "excelExtractText": app.ExcelPayload,
     "extractEmbeddedText": app.Payload,
     "inspectDocumentProtection": app.Payload,
     "getSupportedFileExtensions": None,
@@ -75,7 +75,8 @@ def run(query_type: str, path: str | Path, ext: Optional[str] = "auto", **extra:
     if not path.is_file() and (SAMPLES / path).is_file():
         path = SAMPLES / path
     payload: Dict[str, Any] = {"path": str(path), **extra}
-    if PAYLOAD_TYPES[query_type] is app.Payload:
+    payload_cls = PAYLOAD_TYPES[query_type]
+    if payload_cls is not None and issubclass(payload_cls, app.Payload):
         payload["file_extension"] = Path(path).suffix if ext == "auto" else ext
     return call(query_type, payload)
 
