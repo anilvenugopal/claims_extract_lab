@@ -10,7 +10,7 @@ import zipfile
 import fitz
 import msoffcrypto
 import io
-from text_extract import DocumentContent, ExcelExtractor, ExcelSheetResponse, PdfExtractor, EXTENSION_TO_EXTRACTOR, FormattedPDFTextExtractor
+from text_extract import DocumentContent, ExcelExtractor, OpenpyxlExcelExtractor, ExcelSheetResponse, PdfExtractor, EXTENSION_TO_EXTRACTOR, FormattedPDFTextExtractor
 from formatted_text_extraction import ExtractionConfig
 
 # Settings
@@ -23,6 +23,27 @@ logger.setLevel(level="WARN")
 class Payload:
     path: str
     file_extension: Optional[str] = None
+
+
+@dataclass
+class ExcelPayload(Payload):
+    """Payload for excelExtractText. Everything after file_extension is optional.
+
+    method:  "pandas" (default, the original extractor) or "openpyxl" (coordinate-aware markdown).
+    The options below only apply to method="openpyxl"; setting one with the pandas method is an error
+    rather than being silently ignored. Leave a field as None to use the default.
+    """
+    method: Optional[str] = None
+    include_comments: Optional[bool] = None         # list cell comments (default off)
+    include_formulas: Optional[bool] = None         # list formulas under each table (default off)
+    include_hidden_sheets: Optional[bool] = None    # default on
+    detect_general_dates: Optional[bool] = None     # show date-like numbers under date headers as dates (default off)
+    date_keywords: Optional[list[str]] = None            # header words that mean "date" (replaces the built-in list)
+    include_legend: Optional[bool] = None           # put the "how to read this" note at the top of every sheet (default on)
+    fallback_to_pandas: Optional[bool] = None       # .xls/.xlsb can't be read by openpyxl: use pandas for them (default on; False = raise)
+
+
+EXCEL_METHODS = ("pandas", "openpyxl")
 
 
 ## see formatted_text_extraction.py for param definitions
@@ -265,7 +286,26 @@ def getSupportedFileExtensions(payload) -> list[str]:
     return sorted(EXTENSION_TO_EXTRACTOR.keys())
 
 
-def excelExtractText(payload: Payload) -> list[ExcelSheetResponse]:
+def excelExtractText(payload: ExcelPayload) -> list[ExcelSheetResponse]:
+    method = (getattr(payload, "method", None) or "pandas").strip().lower()
+    if method not in EXCEL_METHODS:
+        raise ValueError(f"Unknown Excel method '{payload.method}'. Use one of: {', '.join(EXCEL_METHODS)}")
+
+    # options that only the openpyxl method understands; only pass the ones that were explicitly set
+    options = {
+        k: v for k, v in {
+            "include_comments": getattr(payload, "include_comments", None),
+            "include_formulas": getattr(payload, "include_formulas", None),
+            "include_hidden_sheets": getattr(payload, "include_hidden_sheets", None),
+            "detect_general_dates": getattr(payload, "detect_general_dates", None),
+            "date_keywords": tuple(payload.date_keywords) if getattr(payload, "date_keywords", None) else None,
+            "include_legend": getattr(payload, "include_legend", None),
+            "fallback_to_pandas": getattr(payload, "fallback_to_pandas", None),
+        }.items() if v is not None
+    }
+    if method == "pandas" and options:
+        raise ValueError(f"Options {sorted(options)} only work with method='openpyxl'")
+
     document, file_extension = load_doc(payload.path, payload.file_extension)
 
     if file_extension not in ['.xls', '.xlsm', '.xlsb', '.xlsx']:
@@ -273,4 +313,6 @@ def excelExtractText(payload: Payload) -> list[ExcelSheetResponse]:
         logger.error(error_msg)
         raise Exception(error_msg)
 
+    if method == "openpyxl":
+        return OpenpyxlExcelExtractor(**options).extractBySheet(file_extension, document)
     return ExcelExtractor().extractBySheet(file_extension, document)
