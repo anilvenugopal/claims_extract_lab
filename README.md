@@ -1,4 +1,4 @@
-# Claims Assist — local extraction lab
+# Local file parsin lab for claims documents
 
 Run and test the Claims Assist document-extraction code from JupyterLab or `pytest`.
 
@@ -9,8 +9,8 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-jupyter lab notebooks/01_claims_extraction_lab.ipynb   # interactive lab: every file type
-jupyter lab notebooks/02_excel_extraction_lab.ipynb    # interactive lab: Excel only (pandas vs openpyxl)
+jupyter lab --config=jupyter_server_config.py notebooks/01_claims_extraction_lab.ipynb   # interactive lab: every file type
+jupyter lab --config=jupyter_server_config.py notebooks/02_excel_extraction_lab.ipynb    # interactive lab: Excel only (pandas vs openpyxl)
 pytest                                                  # automated checks
 python make_samples.py                                  # (re)generate samples/ on its own
 ```
